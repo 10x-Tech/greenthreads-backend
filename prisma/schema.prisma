@@ -1,0 +1,40 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider  = "postgresql"
+  url       = "postgresql://postgres:lzIRinpFzUTrIFIaQMtzMQWXramOdBiW@monorail.proxy.rlwy.net:59840/railway"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  // binaryTargets = ["debian-openssl-3.0.x"]
+}
+
+model Seller {
+  id                 String    @id @default(uuid())
+  products           Product[]
+  is_deleted              Boolean   @default(false)
+  created_at              DateTime  @default(now())
+}
+
+model Product {
+  id                      String    @id @default(uuid())
+  collectionName          String
+  sku                     String    @unique
+  productImages           String[]
+  productName             String
+  description             String
+  materialUsed            String
+  color                   String[]
+  sizesAvailable          String[]
+  suggestedRRPInGBP       Float
+  wholesalePriceInGBP     Float
+  care                    String?
+  seller                  Seller?   @relation(fields: [sellerId], references: [id])
+  sellerId                String?
+  available               Boolean   @default(true)
+  is_deleted              Boolean   @default(false)
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+}
