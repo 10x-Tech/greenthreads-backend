@@ -1,4 +1,4 @@
-# pind-backend
+# GreenThread-backend
 
 To install dependencies:
 
