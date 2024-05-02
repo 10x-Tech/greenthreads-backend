@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import {Request, Response, NextFunction} from "express";
 import prisma from "@/lib/prisma";
 import csvParser from "csv-parser";
 import {
@@ -9,7 +9,7 @@ import {
 import fs from "fs";
 import AppError from "@/utils/AppError";
 import catchAsync from "@/utils/catchAsync";
-import { v4 as uuidv4 } from "uuid";
+import {v4 as uuidv4} from "uuid";
 
 // async function parseCSV(file: Express.Multer.File): Promise<ProductData[]> {
 //   const results: ProductData[] = [];
@@ -82,7 +82,7 @@ import { v4 as uuidv4 } from "uuid";
 //GET PRODUCT BY ID
 export const getProductById = catchAsync(
   async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const {id} = req.params;
     const product = await prisma.product.findUnique({
       where: {
         id,
@@ -327,15 +327,17 @@ async function createProductVariations({
   //     },
   //   },
   // });
+
   await prisma.product.create({
     data: {
       variations: {
         create: variations.map((variant) => ({
-          VariationOptions: {
+          id: variant.variantId,
+          name: variant.variantName,
+          variationOptions: {
             create: variant.options.map((opt) => ({
               connect: {
-                id: opt.id,
-                variationId: variant.variantId,
+                id: opt.optionId,
               },
             })),
           },
@@ -343,6 +345,7 @@ async function createProductVariations({
       },
     },
   });
+
   // const productVariations = await Promise.all(
   //   variations.map(async (variation) => {
   //     // Create ProductVariation for each variation
@@ -390,7 +393,7 @@ export const createProductCombinations = async ({
     const productCombinations = [];
 
     for (const combination of combinations) {
-      const { stock } = combination;
+      const {stock} = combination;
 
       const skuId = generateSkuId(combination);
       const createdCombination = await prisma.productCombination.create({
@@ -412,8 +415,8 @@ export const createProductCombinations = async ({
 
 // Update a product
 export const updateProduct = catchAsync(async (req: Request, res: Response) => {
-  const { productId } = req.params;
-  const { productName, productSlug, description, categories, previewImage } =
+  const {productId} = req.params;
+  const {productName, productSlug, description, categories, previewImage} =
     req.body;
 
   const updatedProduct = await prisma.product.update({
@@ -424,7 +427,7 @@ export const updateProduct = catchAsync(async (req: Request, res: Response) => {
       productName,
       productSlug,
       description,
-      categories: { set: categories },
+      categories: {set: categories},
       previewImage,
     },
   });
@@ -432,13 +435,13 @@ export const updateProduct = catchAsync(async (req: Request, res: Response) => {
   if (updatedProduct) {
     res.status(200).json(updatedProduct);
   } else {
-    res.status(404).json({ message: "Product not found" });
+    res.status(404).json({message: "Product not found"});
   }
 });
 
 // Delete a product
 export const deleteProduct = catchAsync(async (req: Request, res: Response) => {
-  const { productId } = req.params;
+  const {productId} = req.params;
 
   const deletedProduct = await prisma.product.delete({
     where: {
@@ -449,7 +452,7 @@ export const deleteProduct = catchAsync(async (req: Request, res: Response) => {
   if (deletedProduct) {
     res.status(200).json(deletedProduct);
   } else {
-    res.status(404).json({ message: "Product not found" });
+    res.status(404).json({message: "Product not found"});
   }
 });
 
@@ -559,11 +562,11 @@ export const createProductCategory = async ({
 export const createVariation = catchAsync(
   async (req: Request, res: Response) => {
     try {
-      const { name, variationOptions } = req.body;
+      const {name, variationOptions} = req.body;
 
       // Validate data (consider using a validation library like Joi)
       if (!name || !variationOptions || variationOptions.length === 0) {
-        return res.status(400).json({ error: "Missing required fields" });
+        return res.status(400).json({error: "Missing required fields"});
       }
 
       // Efficiently create Variation and VariationOptions in one transaction
@@ -578,13 +581,13 @@ export const createVariation = catchAsync(
             },
           },
         },
-        include: { VariationOptions: true }, // Include related options
+        include: {VariationOptions: true}, // Include related options
       });
 
       res.status(201).json(createdVariation);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: "Internal Server Error" });
+      res.status(500).json({error: "Internal Server Error"});
     }
   }
 );
@@ -592,7 +595,7 @@ export const createVariation = catchAsync(
 export const getVariations = catchAsync(async (req: Request, res: Response) => {
   try {
     const variations = await prisma.variations.findMany({
-      include: { VariationOptions: true }, // Include related options
+      include: {VariationOptions: true}, // Include related options
     });
     res.status(200).json(variations);
   } catch (error) {
@@ -601,11 +604,11 @@ export const getVariations = catchAsync(async (req: Request, res: Response) => {
 });
 export const updateVariation = catchAsync(
   async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { name, variationOptions } = req.body;
+    const {id} = req.params;
+    const {name, variationOptions} = req.body;
 
     const existingVariation = await prisma.variations.findUnique({
-      where: { id },
+      where: {id},
     });
 
     if (!existingVariation) {
@@ -614,21 +617,21 @@ export const updateVariation = catchAsync(
 
     // Validate data (consider using a validation library like Joi)
     if (!name || !variationOptions || variationOptions.length === 0) {
-      return res.status(400).json({ error: "Missing required fields" });
+      return res.status(400).json({error: "Missing required fields"});
     }
 
     const updatedVariation = await prisma.variations.update({
-      where: { id },
+      where: {id},
       data: {
         name,
         VariationOptions: {
           deleteMany: {}, // Delete existing options
           createMany: {
-            data: variationOptions.map((option: any) => ({ name: option })),
+            data: variationOptions.map((option: any) => ({name: option})),
           },
         },
       },
-      include: { VariationOptions: true }, // Include related options
+      include: {VariationOptions: true}, // Include related options
     });
 
     res.json(updatedVariation);
@@ -637,11 +640,11 @@ export const updateVariation = catchAsync(
 
 export const deleteVariation = catchAsync(
   async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const {id} = req.params;
 
     const deletedVariation = await prisma.variations.delete({
-      where: { id },
-      include: { VariationOptions: true }, // Include related options
+      where: {id},
+      include: {VariationOptions: true}, // Include related options
     });
 
     if (!deletedVariation) {

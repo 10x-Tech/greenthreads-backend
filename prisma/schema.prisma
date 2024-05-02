@@ -48,8 +48,8 @@ model Product {
   isNextDayDelivery  Boolean              @default(false)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
-  variations         Variations[]
-  variationOptions   VariationOptions[]
+  variations         Variation[]
+  variationOptions   VariationOption[]
 }
 
 enum DeliveryRange {
@@ -60,23 +60,27 @@ enum DeliveryRange {
   TEN_TO_FOURTEEN_DAYS
 }
 
-model Variations {
-  id               String             @id @default(uuid())
-  name             String             @unique
-  VariationOptions VariationOptions[]
+model Variation {
+  id               String            @id @default(uuid())
+  name             String            @unique
+  variationOptions VariationOption[]
   // ProductVariation ProductVariation[]
-  Product          Product?           @relation(fields: [productId], references: [id])
-  productId        String?
+  Product          Product?          @relation(fields: [productId], references: [id])
+  productId        String?           @map("product_id")
+
+  @@map("variations")
 }
 
-model VariationOptions {
-  id                     String                   @id @default(uuid())
-  name                   String
-  variationId            String?
-  variation              Variations?              @relation(fields: [variationId], references: [id])
+model VariationOption {
+  id          String     @id @default(uuid())
+  name        String
+  variationId String?    @map("variation_id")
+  variation   Variation? @relation(fields: [variationId], references: [id])
   // ProductVariationOption ProductVariationOption[]
-  Product                Product?                 @relation(fields: [productId], references: [id])
-  productId              String?
+  Product     Product?   @relation(fields: [productId], references: [id])
+  productId   String?    @map("product_id")
+
+  @@map("variation_options")
 }
 
 // // Product Variation (e.g., Size, Color)
