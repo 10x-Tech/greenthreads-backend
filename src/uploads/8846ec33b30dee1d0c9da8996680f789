@@ -1,0 +1,3 @@
+name,description,status,original_price,discounted_price,category,images,size_1,stock_1,original_price_1,images_1,size_2,stock_2,original_price_2,images_2,size_3,stock_3,original_price_3,images_3
+Product 1,Description 1,ACTIVE,99.99,89.99,Category 1,url1|url2|url3,s,100,99.99,url4|url5|url6,m,150,99.99,url7|url8|url9,l,200,99.99,url10|url11|url12
+Product 2,Description 2,INACTIVE,149.99,129.99,Category 2,url13|url14|url15,s,50,149.99,url16|url17|url18,m,75,149.99,url19|url20|url21,l,100,149.99,url22|url23|url24

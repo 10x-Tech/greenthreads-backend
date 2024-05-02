@@ -1,40 +1,196 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-datasource db {
-  provider  = "postgresql"
-  url       = "postgresql://postgres:lzIRinpFzUTrIFIaQMtzMQWXramOdBiW@monorail.proxy.rlwy.net:59840/railway"
-}
-
 generator client {
   provider = "prisma-client-js"
-  // binaryTargets = ["debian-openssl-3.0.x"]
 }
 
-model Seller {
-  id                 String    @id @default(uuid())
-  products           Product[]
-  is_deleted              Boolean   @default(false)
-  created_at              DateTime  @default(now())
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
+
+// model Product {
+//   id                  String        @id @default(uuid())
+//   collectionName      String
+//   sku                 String        @unique
+//   productImages       String[]
+//   productName         String
+//   description         String
+//   materialUsed        String
+//   color               String[]
+//   sizesAvailable      String[]
+//   suggestedRRPInGBP   Float
+//   wholesalePriceInGBP Float
+//   care                String?
+//   seller              Seller?       @relation(fields: [sellerId], references: [id])
+//   sellerId            String?
+//   available           Boolean       @default(true)
+//   created_at          DateTime      @default(now())
+//   updated_at          DateTime      @updatedAt
+//   subSkus             SubSku[]
+//   status              ProductStatus @default(ACTIVE)
+//   category            String?
+//   discountedPrice     Float?
+// }
 
 model Product {
-  id                      String    @id @default(uuid())
-  collectionName          String
-  sku                     String    @unique
-  productImages           String[]
-  productName             String
-  description             String
-  materialUsed            String
-  color                   String[]
-  sizesAvailable          String[]
-  suggestedRRPInGBP       Float
-  wholesalePriceInGBP     Float
-  care                    String?
-  seller                  Seller?   @relation(fields: [sellerId], references: [id])
-  sellerId                String?
-  available               Boolean   @default(true)
-  is_deleted              Boolean   @default(false)
-  created_at              DateTime  @default(now())
-  updated_at              DateTime  @updatedAt
+  id                 String               @id @default(uuid())
+  productName        String
+  productSlug        String
+  description        String?
+  previewImage       String?
+  categories         ProductCategory[]
+  ProductImage       ProductImage[]
+  ProductCombination ProductCombination[]
+  deliveryRange      DeliveryRange        @default(ONE_TO_THREE_DAYS)
+  isActive           Boolean              @default(true)
+  isNextDayDelivery  Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  variations         Variations[]
+  variationOptions   VariationOptions[]
+}
+
+enum DeliveryRange {
+  ONE_TO_THREE_DAYS
+  THREE_TO_FIVE_DAYS
+  FIVE_TO_SEVEN_DAYS
+  SEVEN_TO_TEN_DAYS
+  TEN_TO_FOURTEEN_DAYS
+}
+
+model Variations {
+  id               String             @id @default(uuid())
+  name             String             @unique
+  VariationOptions VariationOptions[]
+  // ProductVariation ProductVariation[]
+  Product          Product?           @relation(fields: [productId], references: [id])
+  productId        String?
+}
+
+model VariationOptions {
+  id                     String                   @id @default(uuid())
+  name                   String
+  variationId            String?
+  variation              Variations?              @relation(fields: [variationId], references: [id])
+  // ProductVariationOption ProductVariationOption[]
+  Product                Product?                 @relation(fields: [productId], references: [id])
+  productId              String?
+}
+
+// // Product Variation (e.g., Size, Color)
+// model ProductVariation {
+//   id        String                   @id @default(uuid())
+//   variantId String
+//   Variant   Variations               @relation(fields: [variantId], references: [id])
+//   options   ProductVariationOption[]
+//   productId String
+//   products  Product                  @relation(fields: [productId], references: [id])
+// }
+
+// // Product Variation Option (e.g., Small, Red)
+// model ProductVariationOption {
+//   id                 String           @id @default(uuid())
+//   productVariationId String
+//   ProductVariation   ProductVariation @relation(fields: [productVariationId], references: [id])
+//   optionId           String
+//   VariationOption    VariationOptions @relation(fields: [optionId], references: [id])
+// }
+
+//Product Combination (e.g.Tshirt-Red-Small,Tshirt-Red-Large)
+model ProductCombination {
+  id             String         @id @default(uuid())
+  skuId          String         @unique
+  product        Product        @relation(fields: [productId], references: [id])
+  productId      String
+  availableStock Int            @default(0)
+  ProductStock   ProductStock[]
+  ProductImage   ProductImage[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model ProductStock {
+  id                   String             @id @default(uuid())
+  totalStock           Int                @default(0)
+  unitPrice            Float
+  totalPrice           Float
+  productCombinationId String
+  productCombination   ProductCombination @relation(fields: [productCombinationId], references: [id])
+}
+
+//Images
+model ProductImage {
+  id            String              @id @default(uuid())
+  product       Product?            @relation(fields: [productId], references: [id])
+  productId     String?
+  combination   ProductCombination? @relation(fields: [combinationId], references: [id])
+  combinationId String?
+  imageUrl      String
+}
+
+model Category {
+  id              String            @id @default(uuid())
+  name            String
+  description     String?
+  categoryImg     String?
+  categorySlug    String?
+  parentId        String?
+  productsCount   Int               @default(0)
+  parent          Category?         @relation("ChildToParent", fields: [parentId], references: [id])
+  children        Category[]        @relation("ChildToParent")
+  ProductCategory ProductCategory[]
+}
+
+model ProductCategory {
+  id         String   @id @default(uuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// User model
+model User {
+  userId      String    @id @default(uuid()) @map("user_id")
+  username    String?
+  email       String    @unique
+  externalId  String    @unique
+  profileImg  String?
+  phoneNumber String?   @unique
+  isActive    Boolean   @default(true)
+  Customer    Customer?
+  Vendor      Vendor?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Customer model
+model Customer {
+  customerId String  @id @default(uuid()) @map("customer_id")
+  fullName   String
+  address    String?
+  userId     String  @unique
+  User       User    @relation(fields: [userId], references: [userId])
+}
+
+// Vendor model
+model Vendor {
+  vendorId String     @id @default(uuid()) @map("vendor_id")
+  fullName String
+  address  String?
+  role     VendorRole @default(SELLER)
+  userId   String     @unique
+  User     User       @relation(fields: [userId], references: [userId])
+}
+
+enum VendorRole {
+  ADMIN
+  SELLER
 }

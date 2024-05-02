@@ -2,31 +2,47 @@
   "name": "pind-backend",
   "module": "index.ts",
   "type": "module",
+  "main": "app.js",
   "scripts": {
-    "start": "bun index.ts",
-    "dev": "bun --watch index.ts"
+    "build": "rimraf dis && npx tsc",
+    "prestart": "npm run build",
+    "start": "node  dist/app.js",
+    "preserve": "npm run build",
+    "serve": "concurrently \"npx tsc -w\"  \"nodemon dist/app.js\"",
+    "dev": "bun --watch src/app.ts",
+    "seed": "node dist/seedData.js"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/multer": "^1.4.11",
     "@types/node-schedule": "^2.1.7",
+    "@types/uuid": "^9.0.8",
     "bun-types": "latest",
-    "prisma": "^5.12.1"
+    "nodemon": "^3.1.0",
+    "prisma": "^5.12.1",
+    "ts-node": "^10.9.2",
+    "uuid": "^9.0.1"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.556.0",
+    "@aws-sdk/s3-request-presigner": "^3.565.0",
     "@clerk/clerk-sdk-node": "^4.13.11",
     "@prisma/client": "^4.9.0",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.12.7",
     "body-parser": "^1.20.2",
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
+    "csv-parser": "^3.0.0",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.5",
-    "expo-server-sdk": "^3.9.0",
     "express": "^4.18.3",
     "multer": "^1.4.5-lts.1",
     "node-schedule": "^2.1.1",
+    "rimraf": "^5.0.5",
     "svix": "^1.21.0"
   }
 }
