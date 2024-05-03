@@ -39,17 +39,25 @@ model Product {
   productName        String
   productSlug        String
   description        String?
-  previewImage       String?
-  categories         ProductCategory[]
-  ProductImage       ProductImage[]
-  ProductCombination ProductCombination[]
+  originalPrice      Float
+  discountPercentage Float?               @default(0)
+  discountedPrice    Float?
+  Vendor             Vendor?              @relation(fields: [sellerId], references: [id])
+  sellerId           String?
+  categories         Category[]           @relation("ProductToCategory")
+  combinations       ProductCombination[]
   deliveryRange      DeliveryRange        @default(ONE_TO_THREE_DAYS)
   isActive           Boolean              @default(true)
   isNextDayDelivery  Boolean              @default(false)
+  variations         Variation[]          @relation("ProductVariation")
+  productImages      ProductImage[]
+  previewImage       String?
+  weight             Int?
+  height             Int?
+  length             Int?
+  width              Int?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
-  variations         Variation[]
-  variationOptions   VariationOption[]
 }
 
 enum DeliveryRange {
@@ -63,22 +71,17 @@ enum DeliveryRange {
 model Variation {
   id               String            @id @default(uuid())
   name             String            @unique
+  products         Product[]         @relation("ProductVariation")
   variationOptions VariationOption[]
-  // ProductVariation ProductVariation[]
-  Product          Product?          @relation(fields: [productId], references: [id])
-  productId        String?           @map("product_id")
 
   @@map("variations")
 }
 
 model VariationOption {
-  id          String     @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
-  variationId String?    @map("variation_id")
-  variation   Variation? @relation(fields: [variationId], references: [id])
-  // ProductVariationOption ProductVariationOption[]
-  Product     Product?   @relation(fields: [productId], references: [id])
-  productId   String?    @map("product_id")
+  variationId String    @map("variation_id")
+  variation   Variation @relation(fields: [variationId], references: [id])
 
   @@map("variation_options")
 }
@@ -109,10 +112,12 @@ model ProductCombination {
   product        Product        @relation(fields: [productId], references: [id])
   productId      String
   availableStock Int            @default(0)
-  ProductStock   ProductStock[]
-  ProductImage   ProductImage[]
+  productStock   ProductStock[]
+  productImages  ProductImage[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+
+  @@map("product_combinations")
 }
 
 model ProductStock {
@@ -121,7 +126,9 @@ model ProductStock {
   unitPrice            Float
   totalPrice           Float
   productCombinationId String
-  productCombination   ProductCombination @relation(fields: [productCombinationId], references: [id])
+  productCombinations  ProductCombination @relation(fields: [productCombinationId], references: [id])
+
+  @@map("product_stock")
 }
 
 //Images
@@ -132,28 +139,30 @@ model ProductImage {
   combination   ProductCombination? @relation(fields: [combinationId], references: [id])
   combinationId String?
   imageUrl      String
+
+  @@map("product_images")
 }
 
 model Category {
-  id              String            @id @default(uuid())
-  name            String
-  description     String?
-  categoryImg     String?
-  categorySlug    String?
-  parentId        String?
-  productsCount   Int               @default(0)
-  parent          Category?         @relation("ChildToParent", fields: [parentId], references: [id])
-  children        Category[]        @relation("ChildToParent")
-  ProductCategory ProductCategory[]
+  id            String     @id @default(uuid())
+  name          String
+  description   String?
+  categoryImg   String?
+  categorySlug  String?
+  parentId      String?
+  productsCount Int        @default(0)
+  parent        Category?  @relation("ChildToParent", fields: [parentId], references: [id])
+  children      Category[] @relation("ChildToParent")
+  products      Product[]  @relation("ProductToCategory")
 }
 
-model ProductCategory {
-  id         String   @id @default(uuid())
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id])
-}
+// model ProductCategory {
+//   id         String   @id @default(uuid())
+//   categoryId String
+//   category   Category @relation(fields: [categoryId], references: [id])
+//   productId  String
+//   product    Product  @relation(fields: [productId], references: [id])
+// }
 
 enum ProductStatus {
   ACTIVE
@@ -186,12 +195,13 @@ model Customer {
 
 // Vendor model
 model Vendor {
-  vendorId String     @id @default(uuid()) @map("vendor_id")
+  id       String     @id @default(uuid()) @map("seller_id")
   fullName String
   address  String?
   role     VendorRole @default(SELLER)
   userId   String     @unique
   User     User       @relation(fields: [userId], references: [userId])
+  products Product[]
 }
 
 enum VendorRole {

@@ -21,6 +21,9 @@ const upload = multer({ dest: "src/uploads/" });
 // Get all products
 router.get("/", getAllProducts);
 
+// Get
+router.get("/variations", getVariations);
+
 // Get all products
 router.route("/add").post(createProduct);
 
@@ -37,9 +40,6 @@ router.get("/:id", getProductById);
 
 // Create
 router.route("/create-variation").post(createVariation);
-
-// Get
-router.route("/variations").get(getVariations);
 
 // update
 router.route("/variations/:id").patch(updateVariation).delete(deleteVariation);
