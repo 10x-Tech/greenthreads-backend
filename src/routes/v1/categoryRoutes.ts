@@ -9,9 +9,7 @@ import {
 
 const router: Router = express.Router();
 
-router.route("/categories").get(getAllCategories);
-
-router.route("/categories/create").post(createCategory);
+router.route("/categories").get(getAllCategories).post(createCategory);
 
 router.route("/subcategories/:categoryId").get(getSubCategoriesBasedOnParent);
 

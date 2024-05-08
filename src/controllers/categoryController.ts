@@ -43,9 +43,16 @@ export const createCategory = catchAsync(
 );
 
 export const getAllCategories = catchAsync(
-  async (req: Request, res: Response) => {
-    const categories = await prisma.category.findMany();
-    res.status(200).json(categories);
+  async (req: Request, res: Response, next: NextFunction) => {
+    const categories = await prisma.category.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    res.status(200).json({
+      success: true,
+      categories: categories,
+    });
   }
 );
 

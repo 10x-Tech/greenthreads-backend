@@ -3,7 +3,7 @@ import {
   LooseAuthProp,
   WithAuthProp,
 } from "@clerk/clerk-sdk-node";
-import {Request, Response, NextFunction} from "express";
+import { Request, Response, NextFunction } from "express";
 
 /* extend Express Request */
 declare global {
@@ -23,7 +23,8 @@ export const checkAuth = (
   res: Response,
   next: NextFunction
 ) => {
-  if (!req.auth.userId)
+  console.log(req?.auth, "AUTH");
+  if (!req?.auth?.userId)
     return res.status(401).json({
       success: false,
       message: "Please login to continue",
@@ -43,20 +44,19 @@ export const bufferToJSON = (
   next();
 };
 
-
-import multer from 'multer'
-import path from 'path'
+import multer from "multer";
+import path from "path";
 
 // Multer configuration
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      cb(null, path.join(__dirname, 'uploadImage')); // Set the destination folder for uploads
+      cb(null, path.join(__dirname, "uploadImage")); // Set the destination folder for uploads
     },
     filename: (req, file, cb) => {
-      cb(null, file.fieldname + '-' + Date.now()); // Set the filename
+      cb(null, file.fieldname + "-" + Date.now()); // Set the filename
     },
   }),
 });
 
-export const handleFileUpload = upload.single('file'); // This middleware will handle single file uploads with the field name 'file'
+export const handleFileUpload = upload.single("file"); // This middleware will handle single file uploads with the field name 'file'

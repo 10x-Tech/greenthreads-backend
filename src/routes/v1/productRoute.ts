@@ -8,40 +8,32 @@ import {
   deleteVariation,
   // bulkUpload,
   getProductById,
-  // updateProduct,
-  // deleteProduct,
+  updateProduct,
+  deleteProduct,
 } from "@/controllers/productController";
 import multer from "multer";
+import { checkAuth } from "@/middleware";
 const router: Router = express.Router();
 const upload = multer({ dest: "src/uploads/" });
 
-//bulk upload
-// router.post("/bulk-upload", upload.single("file"), bulkUpload);
+// VARIATIONS
 
-// Get all products
-router.get("/", getAllProducts);
-
+// router.use(checkAuth);
 // Get
-router.get("/variations", getVariations);
+router.route("/variations").get(getVariations).post(createVariation);
 
-// Get all products
-router.route("/add").post(createProduct);
-
-// Get product by ID
-router.get("/:id", getProductById);
-
-// // Update product
-// router.put("/:id", updateProduct);
-
-// // Delete product
-// router.delete("/:id", deleteProduct);
-
-// Variations
-
-// Create
-router.route("/create-variation").post(createVariation);
-
-// update
+// Update
 router.route("/variations/:id").patch(updateVariation).delete(deleteVariation);
+
+// PRODUCTS
+
+// router.post("/bulk-upload", upload.single("file"), bulkUpload);
+router.route("/").get(getAllProducts).post(createProduct);
+
+router
+  .route("/:productId")
+  .get(getProductById)
+  .patch(updateProduct)
+  .delete(deleteProduct);
 
 export default router;

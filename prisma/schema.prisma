@@ -10,54 +10,64 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// model Product {
-//   id                  String        @id @default(uuid())
-//   collectionName      String
-//   sku                 String        @unique
-//   productImages       String[]
-//   productName         String
-//   description         String
-//   materialUsed        String
-//   color               String[]
-//   sizesAvailable      String[]
-//   suggestedRRPInGBP   Float
-//   wholesalePriceInGBP Float
-//   care                String?
-//   seller              Seller?       @relation(fields: [sellerId], references: [id])
-//   sellerId            String?
-//   available           Boolean       @default(true)
-//   created_at          DateTime      @default(now())
-//   updated_at          DateTime      @updatedAt
-//   subSkus             SubSku[]
-//   status              ProductStatus @default(ACTIVE)
-//   category            String?
-//   discountedPrice     Float?
-// }
+// Define OrderItem table
+model OrderItem {
+  id                 String  @id @default(uuid())
+  productId          String
+  product            Product @relation(fields: [productId], references: [id])
+  productName        String
+  productPrice       Float
+  discountPercentage Float?  @default(0)
+  discountedPrice    Float?
+  quantity           Int
+  orderId            String
+  order              Order   @relation(fields: [orderId], references: [id])
+}
+
+// Define Order table
+model Order {
+  id          String      @id @default(uuid())
+  userId      Int
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  subtotal    Float
+  totalAmount Float
+  status      OrderStatus
+}
+
+enum OrderStatus {
+  ACTIVE
+  PENDING
+  DELIVERED
+}
 
 model Product {
   id                 String               @id @default(uuid())
   productName        String
   productSlug        String
+  productCode        String?              @unique()
   description        String?
   originalPrice      Float
   discountPercentage Float?               @default(0)
   discountedPrice    Float?
   Vendor             Vendor?              @relation(fields: [sellerId], references: [id])
-  sellerId           String?
+  sellerId           String?              @map("seller_id")
   categories         Category[]           @relation("ProductToCategory")
   combinations       ProductCombination[]
   deliveryRange      DeliveryRange        @default(ONE_TO_THREE_DAYS)
   isActive           Boolean              @default(true)
   isNextDayDelivery  Boolean              @default(false)
-  variations         Variation[]          @relation("ProductVariation")
+  variations         ProductVariation[]
   productImages      ProductImage[]
   previewImage       String?
-  weight             Int?
-  height             Int?
-  length             Int?
-  width              Int?
+  weight             Int?                 @default(0)
+  height             Int?                 @default(0)
+  length             Int?                 @default(0)
+  width              Int?                 @default(0)
+  isDeleted          Boolean              @default(false) @map("is_deleted")
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
+  OrderItem          OrderItem[]
 }
 
 enum DeliveryRange {
@@ -69,53 +79,59 @@ enum DeliveryRange {
 }
 
 model Variation {
-  id               String            @id @default(uuid())
-  name             String            @unique
-  products         Product[]         @relation("ProductVariation")
+  id               String             @id @default(uuid())
+  name             String             @unique
   variationOptions VariationOption[]
+  ProductVariation ProductVariation[]
 
   @@map("variations")
 }
 
 model VariationOption {
-  id          String    @id @default(uuid())
-  name        String
-  variationId String    @map("variation_id")
-  variation   Variation @relation(fields: [variationId], references: [id])
+  id                     String                   @id @default(uuid())
+  name                   String
+  variationId            String                   @map("variation_id")
+  variation              Variation                @relation(fields: [variationId], references: [id])
+  ProductVariationOption ProductVariationOption[]
 
   @@map("variation_options")
 }
 
 // // Product Variation (e.g., Size, Color)
-// model ProductVariation {
-//   id        String                   @id @default(uuid())
-//   variantId String
-//   Variant   Variations               @relation(fields: [variantId], references: [id])
-//   options   ProductVariationOption[]
-//   productId String
-//   products  Product                  @relation(fields: [productId], references: [id])
-// }
+model ProductVariation {
+  id        String                   @id @default(uuid())
+  variantId String
+  variation Variation                @relation(fields: [variantId], references: [id])
+  options   ProductVariationOption[]
+  productId String
+  products  Product                  @relation(fields: [productId], references: [id])
+
+  @@map("product_variations")
+}
 
 // // Product Variation Option (e.g., Small, Red)
-// model ProductVariationOption {
-//   id                 String           @id @default(uuid())
-//   productVariationId String
-//   ProductVariation   ProductVariation @relation(fields: [productVariationId], references: [id])
-//   optionId           String
-//   VariationOption    VariationOptions @relation(fields: [optionId], references: [id])
-// }
+model ProductVariationOption {
+  id                 String           @id @default(uuid())
+  productVariationId String
+  ProductVariation   ProductVariation @relation(fields: [productVariationId], references: [id])
+  optionId           String
+  variationOptions   VariationOption  @relation(fields: [optionId], references: [id])
+
+  @@map("product_variation_options")
+}
 
 //Product Combination (e.g.Tshirt-Red-Small,Tshirt-Red-Large)
 model ProductCombination {
-  id             String         @id @default(uuid())
-  skuId          String         @unique
-  product        Product        @relation(fields: [productId], references: [id])
-  productId      String
-  availableStock Int            @default(0)
-  productStock   ProductStock[]
-  productImages  ProductImage[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id               String         @id @default(uuid())
+  skuId            String         @unique
+  product          Product        @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  productId        String
+  availableStock   Int            @default(0)
+  productStock     ProductStock[]
+  productImages    ProductImage[]
+  variationDetails Json?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   @@map("product_combinations")
 }
@@ -154,15 +170,9 @@ model Category {
   parent        Category?  @relation("ChildToParent", fields: [parentId], references: [id])
   children      Category[] @relation("ChildToParent")
   products      Product[]  @relation("ProductToCategory")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime?  @updatedAt
 }
-
-// model ProductCategory {
-//   id         String   @id @default(uuid())
-//   categoryId String
-//   category   Category @relation(fields: [categoryId], references: [id])
-//   productId  String
-//   product    Product  @relation(fields: [productId], references: [id])
-// }
 
 enum ProductStatus {
   ACTIVE
@@ -190,7 +200,7 @@ model Customer {
   fullName   String
   address    String?
   userId     String  @unique
-  User       User    @relation(fields: [userId], references: [userId])
+  User       User    @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
 }
 
 // Vendor model
@@ -200,7 +210,7 @@ model Vendor {
   address  String?
   role     VendorRole @default(SELLER)
   userId   String     @unique
-  User     User       @relation(fields: [userId], references: [userId])
+  User     User       @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
   products Product[]
 }
 
