@@ -1,39 +1,32 @@
-import express, { Router, Request, Response } from "express";
+import express, { Router } from "express";
 import {
   createProduct,
-  getAllProducts,
-  createVariation,
-  getVariations,
-  updateVariation,
-  deleteVariation,
-  // bulkUpload,
   getProductById,
+  createOrUpdateSKU,
   updateProduct,
-  deleteProduct,
-} from "@/controllers/productController";
-import multer from "multer";
-import { checkAuth } from "@/middleware";
+  getAllProducts,
+  getAllVariations,
+  getAllSkus,
+} from "@/controllers/productControllersV2";
+import { auth } from "@/middleware";
 const router: Router = express.Router();
-const upload = multer({ dest: "src/uploads/" });
-
-// VARIATIONS
-
-// router.use(checkAuth);
-// Get
-router.route("/variations").get(getVariations).post(createVariation);
-
-// Update
-router.route("/variations/:id").patch(updateVariation).delete(deleteVariation);
 
 // PRODUCTS
+router.route("/get-variations").get(getAllVariations);
 
-// router.post("/bulk-upload", upload.single("file"), bulkUpload);
+router.use(auth);
+
+router.route("/:productId/skus/addEdit").post(createOrUpdateSKU);
 router.route("/").get(getAllProducts).post(createProduct);
 
-router
-  .route("/:productId")
-  .get(getProductById)
-  .patch(updateProduct)
-  .delete(deleteProduct);
+// router
+//   .route("/:productId")
+//   .get(getProductById)
+//   .patch(updateProduct)
+//   .delete(deleteProduct);
+
+router.route("/:productId/skus").get(getAllSkus);
+
+router.route("/:productId").get(getProductById).patch(updateProduct);
 
 export default router;

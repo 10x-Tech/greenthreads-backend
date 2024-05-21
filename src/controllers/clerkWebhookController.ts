@@ -14,17 +14,17 @@ async function createCustomer({
     data: {
       username,
       email,
-      externalId,
-      isActive: true, // Setting isActive to true by default
-      Customer: {
+      isActive: true,
+      customer: {
         create: {
           fullName,
-          address,
+          externalId,
+          // address,
         },
       },
     },
     include: {
-      Customer: true,
+      customer: true,
     },
   });
 }
@@ -42,25 +42,26 @@ async function createVendor({
     data: {
       username,
       email,
-      externalId,
       phoneNumber,
       isActive: true, // Setting isActive to true by default
-      Vendor: {
+      vendor: {
         create: {
           fullName,
           address,
           role,
+          externalId,
         },
       },
     },
     include: {
-      Vendor: true,
+      vendor: true,
     },
   });
 }
 
 // sync clerk user with database
 export const syncUser = async (req: Request, res: Response) => {
+  console.log("HELLo");
   // Check if the 'Signing Secret' from the Clerk Dashboard was correctly provided
   const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
   if (!WEBHOOK_SECRET) {
@@ -70,6 +71,7 @@ export const syncUser = async (req: Request, res: Response) => {
   // Grab the headers and body
   const headers = req.headers;
   const payload = req.body;
+  console.log(payload, "PAYLOAD");
 
   // Get the Svix headers for verification
   const svix_id = headers["svix-id"] as string;
@@ -88,7 +90,6 @@ export const syncUser = async (req: Request, res: Response) => {
   const wh = new Webhook(WEBHOOK_SECRET);
 
   let evt: Event;
-
   // Attempt to verify the incoming webhook
   // If successful, the payload will be available from 'evt'
   // If the verification fails, error out and  return error code
@@ -134,10 +135,13 @@ export const syncUser = async (req: Request, res: Response) => {
     //   },
     // });
   } else if (eventType === "user.updated") {
-    await prisma.user.update({
+    await prisma.vendor.update({
       data: {
-        // fullName: ((first_name || "") + " " + (last_name || "")).trim(),
-        ...(image_url && { avatarUrl: image_url as string }),
+        user: {
+          update: {
+            data: { ...(image_url && { avatarUrl: image_url as string }) },
+          },
+        },
       },
       where: {
         externalId: id as string,
@@ -147,9 +151,13 @@ export const syncUser = async (req: Request, res: Response) => {
     const { deleted } = evt.data;
 
     if (deleted) {
-      await prisma.user.update({
+      await prisma.vendor.update({
         data: {
-          isActive: false,
+          user: {
+            update: {
+              isActive: false,
+            },
+          },
         },
         where: {
           externalId: id as string,

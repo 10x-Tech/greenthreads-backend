@@ -5,6 +5,7 @@ import AppError from "@/utils/AppError";
 
 export const createCategory = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
+    console.log(req.body, "BODYY");
     try {
       const { name, description, categoryImg, categorySlug, parentId } =
         req.body;

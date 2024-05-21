@@ -3,8 +3,6 @@ import {
   createCategory,
   getAllCategories,
   getSubCategoriesBasedOnParent,
-  //   createSubCategory,
-  //   getAllSubCategories,
 } from "@/controllers/categoryController";
 
 const router: Router = express.Router();

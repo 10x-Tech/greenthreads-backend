@@ -21,7 +21,6 @@ const handleValidationErrorDB = (err: any) => {
 };
 
 const sendErrorDev = (err: any, req: Request, res: Response) => {
-  // console.log("ERROR", "HELLL");
   // A) API
   if (req.originalUrl.startsWith("/api")) {
     return res.status(err.statusCode).json({
@@ -84,8 +83,8 @@ const globalErrohandler = (
   res: Response,
   next: NextFunction
 ) => {
-  // console.log(err.stack);
-  err.statusCode = err.statusCode || 500;
+  err.statusCode =
+    err.statusCode || err.message === "Unauthenticated" ? 401 : 500;
   err.status = err.status || "error";
 
   if (process.env.NODE_ENV === "development") {

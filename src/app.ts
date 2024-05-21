@@ -3,13 +3,18 @@ import "dotenv/config";
 import express, { Application, Request, Response, NextFunction } from "express";
 import bodyParser from "body-parser";
 import productRoutes from "@/routes/v1/productRoute";
-import webhookRoutes from "@/routes/v1/webhooks";
+import clerkWebhookRoutes from "@/routes/v1/clerkWebhooks";
+import stripeWebhookRoutes from "@/routes/v1/stripeWebhook";
+
 import categoryRoutes from "@/routes/v1/categoryRoutes";
+import cartRoutes from "@/routes/v1/cartRoutes";
+import orderRoutes from "@/routes/v1/orderRoutes";
 import s3Uploads from "@/routes/v1/s3Uploads";
 
 import AppError from "@/utils/AppError";
 import globalErrorHandler from "@/controllers/error";
 import cors from "cors";
+import { bufferToJSON } from "@/middleware";
 
 const PORT = process.env.PORT || 8080;
 
@@ -21,38 +26,39 @@ app.options("*", cors());
 
 // app.use(bodyParser.json());
 /* register middlewares */
-// app.use(bodyParser.raw({ type: "application/json" }));
 // Body parser, reading data from body into req.body
-app.use(express.json({ limit: "10kb" }));
+
+app.use((req, res, next) => {
+  if (req.originalUrl.includes("webhook")) {
+    next();
+  } else {
+    express.json({ limit: "10kb" })(req, res, next);
+  }
+});
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+
 // app.use(cookieParser());
 
-app.get("/", (req, res) => {
-  res.send(`HELLO FROM et`);
-});
+// Routes
+app.use("/webhook/sellers", clerkWebhookRoutes);
 
 // Routes
-app.use("/api/v1/users", webhookRoutes);
+app.use("/webhook/checkout", stripeWebhookRoutes);
 // Routes
 app.use("/api/v1/products", productRoutes);
 
 // Routes
+app.use("/api/v1/orders", orderRoutes);
+
+// app.use("/api/v1/brands");
+// Routes
 app.use("/api/v1", categoryRoutes);
 
 // Routes
-app.use("/api/v1", s3Uploads);
+app.use("/api/v1/cart", cartRoutes);
 
 // Routes
-// app.use("/api/v1", categoryRoutes);
-
-// /* aws routes */
-// app.use("/api/aws", handleFileUpload, awsRouter);
-
-// Error handling middleware
-// app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-//   console.error(err.stack);
-//   res.status(500).send("Something broke!");
-// });
+app.use("/api/v1", s3Uploads);
 
 const server = app.listen(PORT, () => {
   console.log(`Listening: http://localhost:${PORT}`);

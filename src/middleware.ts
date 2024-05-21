@@ -1,4 +1,5 @@
 import {
+  ClerkExpressRequireAuth,
   ClerkExpressWithAuth,
   LooseAuthProp,
   WithAuthProp,
@@ -12,7 +13,7 @@ declare global {
   }
 }
 
-const clerk = ClerkExpressWithAuth({});
+const clerk = ClerkExpressRequireAuth({});
 
 export const auth = (req: Request, res: Response, next: NextFunction) => {
   clerk(req, res, next);
@@ -23,7 +24,6 @@ export const checkAuth = (
   res: Response,
   next: NextFunction
 ) => {
-  console.log(req?.auth, "AUTH");
   if (!req?.auth?.userId)
     return res.status(401).json({
       success: false,
@@ -38,7 +38,7 @@ export const bufferToJSON = (
   next: NextFunction
 ) => {
   if (["PUT", "POST", "PATCH"].includes(req.method) && req.body) {
-    const stringify = (req.body as Buffer).toString();
+    const stringify = (req.body as Buffer).toString('utf-8');
     req.body = JSON.parse(stringify ?? "{}");
   }
   next();

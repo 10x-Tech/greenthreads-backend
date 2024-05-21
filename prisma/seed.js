@@ -255,79 +255,110 @@ const data = {
 
 // createProductWithCombinations(newProductData);
 
-function generateCombinations(variations: any[]): any[] {
-  const combinations: any[] = [];
+import { PrismaClient } from "@prisma/client";
+import { connect } from "http2";
 
-  // Recursive function to generate combinations using backtracking
-  function backtrack(index: number, currentOptions: any[]): void {
-    if (index === variations.length) {
-      // All variation options have been chosen, create a combination
-      const skuId = `TS001-${currentOptions
-        .map((option) => option.optionName.substring(0, 2).toUpperCase())
-        .join("-")}`;
-      const availableStock = Math.min(
-        ...currentOptions.map((option) => {
-          const variation = variations.find(
-            (v) => v.name === option.variationName
-          );
-          const selectedOption = variation?.options.find(
-            (opt: any) => opt.name === option.optionName
-          );
-          return selectedOption?.stock || 0;
-        })
-      );
+const prisma = new PrismaClient();
 
-      combinations.push({
-        skuId,
-        variationOptions: currentOptions,
-        availableStock,
-      });
-      return;
-    }
-
-    // Choose an option from the current variation
-    for (const option of variations[index].options) {
-      backtrack(index + 1, [
-        ...currentOptions,
-        { variationName: variations[index].name, optionName: option.name },
-      ]);
-    }
-  }
-
-  // Start backtracking to generate all combinations
-  backtrack(0, []);
-
-  return combinations;
+async function main() {
+  // Seed data for Size model
+  await prisma.size.createMany({
+    data: [
+      { name: "Small" },
+      { name: "Medium" },
+      { name: "Large" },
+      { name: "28" },
+      { name: "32" },
+      { name: "30" },
+      // Add more sizes as needed
+    ],
+  });
+  // Seed data for Color model
+  await prisma.color.createMany({
+    data: [
+      { name: "Red" },
+      { name: "Blue" },
+      { name: "Green" },
+      { name: "Grey" },
+      // Add more colors as needed
+    ],
+  });
+  const parentCat = await prisma.category.create({
+    data: {
+      name: "Men",
+    },
+  });
+  const child = await prisma.category.create({
+    data: {
+      name: "Clothing",
+      parentId: parentCat.id,
+    },
+  });
+  const user1 = await prisma.user.create({
+    data: {
+      userId: "1", // Provide a UUID for userId
+      username: "john_doe",
+      email: "john@example.com",
+      profileImg: "https://example.com/profile.jpg",
+      phoneNumber: "+1234567890",
+    },
+  });
+  // Seed Customer data
+  const customer1 = await prisma.customer.create({
+    data: {
+      id: "1", // Provide a UUID for customer id
+      externalId: "customer1", // Example external ID
+      fullName: "John Doe",
+      address: {
+        create: [
+          {
+            city: "Ahmedabad",
+            country: "India",
+            line1: "123 Main Street",
+            postalCode: "380028",
+            state: "Gujarat",
+          },
+        ],
+      },
+      userId: user1.userId,
+    },
+  });
+  const user2 = await prisma.user.create({
+    data: {
+      userId: "2", // Provide a UUID for userId
+      username: "sam_gad",
+      email: "samyak@example.com",
+      profileImg: "https://example.com/profile.jpg",
+      phoneNumber: "5656565656",
+    },
+  });
+  // Seed Customer data
+  const customer2 = await prisma.customer.create({
+    data: {
+      id: "2", // Provide a UUID for customer id
+      externalId: "customer2", // Example external ID
+      fullName: "Samyak Gandhi",
+      address: {
+        create: [
+          {
+            city: "Ahmedabad",
+            country: "India",
+            line1: "123 Main Street",
+            postalCode: "380028",
+            state: "Gujarat",
+          },
+        ],
+      },
+      userId: user2.userId,
+    },
+  });
 }
 
-// Example usage:
-const variations = [
-  {
-    name: "Color",
-    options: [
-      { name: "Red", stock: 100, price: 29.99 },
-      { name: "Blue", stock: 50, price: 29.99 },
-      { name: "Green", stock: 75, price: 29.99 },
-    ],
-  },
-  {
-    name: "Size",
-    options: [
-      { name: "Small", stock: 100, price: 29.99 },
-      { name: "Medium", stock: 50, price: 29.99 },
-      { name: "Large", stock: 75, price: 29.99 },
-    ],
-  },
-  // Add more variations as needed
-  {
-    name: "Material",
-    options: [
-      { name: "Cotton", stock: 150, price: 39.99 },
-      { name: "Polyester", stock: 80, price: 34.99 },
-      { name: "Silk", stock: 60, price: 49.99 },
-    ],
-  },
-];
-
-const combinations = generateCombinations(variations);
-console.log(combinations);
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
