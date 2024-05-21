@@ -1,6 +1,5 @@
 import {
   ClerkExpressRequireAuth,
-  ClerkExpressWithAuth,
   LooseAuthProp,
   WithAuthProp,
 } from "@clerk/clerk-sdk-node";
@@ -38,7 +37,7 @@ export const bufferToJSON = (
   next: NextFunction
 ) => {
   if (["PUT", "POST", "PATCH"].includes(req.method) && req.body) {
-    const stringify = (req.body as Buffer).toString('utf-8');
+    const stringify = (req.body as Buffer).toString("utf-8");
     req.body = JSON.parse(stringify ?? "{}");
   }
   next();
