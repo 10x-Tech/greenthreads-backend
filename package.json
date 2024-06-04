@@ -44,9 +44,12 @@
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.5",
     "express": "^4.18.3",
+    "express-rate-limit": "^7.3.0",
+    "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "node-schedule": "^2.1.1",
+    "resend": "^3.2.0",
     "rimraf": "^5.0.5",
     "stripe": "^15.6.0",
     "svix": "^1.21.0"

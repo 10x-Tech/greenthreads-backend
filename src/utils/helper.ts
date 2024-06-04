@@ -90,3 +90,71 @@ export function generateProductCode(
 
   return productCode;
 }
+
+export function generateOrderId() {
+  const prefix = "Order_";
+  const uuid = uuidv4().replace(/-/g, ""); // Remove hyphens from UUID
+  const randomString = uuid.slice(0, 7); // Take the first 7 characters
+  return prefix + randomString;
+}
+
+// Example usage
+const orderId = generateOrderId();
+console.log(orderId);
+
+export const formatPeriodicRevenue = (
+  orderItems: any[],
+  duration: string,
+  currentYear: number
+) => {
+  let periods: Date[] = [];
+
+  if (duration === "yearly") {
+    // Initialize periods for the last 5 years
+    periods = Array.from(
+      { length: 5 },
+      (_, i) => new Date(currentYear - i, 0, 1)
+    );
+  } else if (duration === "monthly") {
+    // Initialize periods for all 12 months of the current year
+    periods = Array.from({ length: 12 }, (_, i) => new Date(currentYear, i, 1));
+  }
+
+  const revenue = periods.reduce((acc: any, period) => {
+    const key = formatDateKey(period, duration);
+    acc[key] = 0; // Initialize revenue for each period to 0
+    return acc;
+  }, {});
+
+  // Accumulate actual revenue from order items
+  for (const orderItem of orderItems) {
+    const orderDate = new Date(orderItem.createdAt);
+    const key = formatDateKey(orderDate, duration);
+
+    // Add order item total amount to revenue for the corresponding period
+    if (revenue[key] !== undefined) {
+      revenue[key] += orderItem.amountTotal;
+    }
+  }
+
+  // Format the revenue data into the desired response format
+  return Object.keys(revenue).map((key) => ({
+    name: key,
+    total: revenue[key],
+  }));
+};
+
+// Helper function to format date keys
+const formatDateKey = (date: Date, duration: string): string => {
+  const year = date.getFullYear();
+  const month = date.toLocaleString("default", { month: "short" }); // Get month name in short format (e.g., Jan, Feb)
+
+  switch (duration) {
+    case "yearly":
+      return year.toString();
+    case "monthly":
+      return `${month}`;
+    default:
+      return "";
+  }
+};

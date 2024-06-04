@@ -7,7 +7,6 @@ export const addToCart = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { customerId } = req.params;
     const { skuId, quantity } = req.body;
-
     try {
       // Check if customerId and skuId are provided
       if (!customerId || !skuId || !quantity) {
@@ -113,6 +112,7 @@ export const addToCart = catchAsync(
         .status(200)
         .json({ message: "Item added to cart successfully", result });
     } catch (error) {
+      console.log(error, "ERROR");
       return next(new AppError(500, "Internal server error"));
     }
   }
@@ -120,12 +120,12 @@ export const addToCart = catchAsync(
 
 export const getCartItems = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const customerId = req?.auth?.userId ?? "";
+    const customerId = req?.auth?.userId ?? req.params.customerId;
     const cartItems = await prisma.cartItem.findMany({
       where: { cart: { customerId } },
       include: { sku: true },
     });
-    res.status(200).json(cartItems);
+    res.status(200).json({ success: true, data: cartItems });
   }
 );
 

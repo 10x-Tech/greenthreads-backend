@@ -9,13 +9,15 @@ import {
   getAllSkus,
   deleteProduct,
 } from "@/controllers/productControllers";
-import { auth } from "@/middleware";
+import { auth, authorizeRoles } from "@/middleware";
+import { VendorRole } from "@prisma/client";
+
 const router: Router = express.Router();
 
 // PRODUCTS
 router.route("/get-variations").get(getAllVariations);
 
-router.use(auth);
+router.use(auth, authorizeRoles(VendorRole.SELLER));
 router.route("/").get(getAllProducts).post(createProduct);
 router
   .route("/:productId")

@@ -1,16 +1,19 @@
 import express, { Router } from "express";
 import {
-  getAllBrands,
   createBrand,
   getBrandById,
+  getBrandBySeller,
 } from "@/controllers/brandController";
+import { auth, authorizeRoles } from "@/middleware";
+import { VendorRole } from "@prisma/client";
 
 const router: Router = express.Router();
 
-router.route("/").get(getAllBrands).post(createBrand);
+router.use(auth);
 
-router.route("/:brandId").get(getBrandById);
+router.route("/").get(authorizeRoles(VendorRole.SELLER), getBrandBySeller);
 
-// router.route("/subcategories").get(getAllSubCategories).post(createSubCategory);
+router.route("/").post(authorizeRoles(VendorRole.SELLER), createBrand);
 
+router.route("/:brandId").get(authorizeRoles(VendorRole.SELLER), getBrandById);
 export default router;

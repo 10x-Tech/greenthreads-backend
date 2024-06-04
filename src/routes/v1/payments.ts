@@ -1,23 +1,22 @@
 import express, { Router } from "express";
-import * as orderControllers from "@/controllers/orderController";
+import * as paymentController from "@/controllers/paymentController";
 import { auth, authorizeRoles } from "@/middleware";
 import { VendorRole } from "@prisma/client";
 const router: Router = express.Router();
 
 router.use(auth);
+const allowedRoles = Object.values(VendorRole);
 
 router.get(
   "/",
   authorizeRoles(VendorRole.SELLER),
-  orderControllers.getOrdersBySellerId
+  paymentController.getPaymentsBySeller
 );
 
-router.post(
-  "/update-status",
-  authorizeRoles(VendorRole.SELLER),
-  orderControllers.updateOrderItemStatus
+router.get(
+  "/revenue",
+  authorizeRoles(...allowedRoles),
+  paymentController.getRevenueInfo
 );
-
-router.get("/:orderId", orderControllers.getOrderById);
 
 export default router;

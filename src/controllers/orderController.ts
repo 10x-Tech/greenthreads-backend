@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import AppError from "@/utils/AppError";
 import catchAsync from "@/utils/catchAsync";
 import { OrderItemStatus, OrderStatus, Prisma } from "@prisma/client";
+import Email from "@/utils/email";
+import { generateOrderId } from "@/utils/helper";
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 export const getCheckoutSession = async (
@@ -27,6 +29,7 @@ export const getCheckoutSession = async (
                   originalPrice: true,
                   discountedPrice: true,
                   discountPercentage: true,
+                  productImages: true,
                 },
               },
             },
@@ -51,10 +54,8 @@ export const getCheckoutSession = async (
       product_data: {
         name: item.sku.product.productName,
         description: item.sku.product?.description ?? "",
-        images: [
-          "https://images.unsplash.com/photo-1618677603286-0ec56cb6e1b5",
-          "https://images.unsplash.com/photo-1578021127722-1f1ff95b429e",
-        ],
+        images:
+          item.sku.product.productImages.map((imgData) => imgData.url) ?? [],
       },
       unit_amount: item.unitPrice * 100,
     },
@@ -145,8 +146,6 @@ const fulfillOrder = (session: any) => {
 };
 
 const createOrder = async (session: any) => {
-  console.log("SESSION__", session);
-
   const cart = await prisma.cart.findUnique({
     where: { customerId: session.client_reference_id },
     include: {
@@ -206,7 +205,7 @@ const createOrder = async (session: any) => {
 
   const order = await prisma.order.create({
     data: {
-      orderDisplayId: session.id,
+      orderDisplayId: generateOrderId(),
       customer: {
         connect: { externalId: session.client_reference_id },
       },
@@ -226,11 +225,79 @@ const createOrder = async (session: any) => {
       totalDetails: session.total_details,
       status: OrderStatus["IN_PROGRESS"],
     },
+    include: {
+      orderItems: true,
+    },
   });
 
-  // 2.TODO Notify User Order Successfully Created
+  // Create Payment Records for each orderItem
+  for (const orderItem of order.orderItems) {
+    await prisma.payments.create({
+      data: {
+        orderItemId: orderItem.id,
+        sellerId: orderItem.sellerId as string,
+        amount: orderItem.amountTotal, // Amount for this specific order item
+        date: new Date(),
+        status: session.payment_status,
+      },
+    });
+  }
 
-  // 3.TODO Notify Seller About Order
+  // 2.TODO Notify User Order Successfully Created
+  const sellerEmails: any = {}; // Object to store seller emails with their order details
+
+  // Notify Seller About Order
+  for (const orderItem of order.orderItems) {
+    const sellerId = orderItem.sellerId as string;
+
+    if (!sellerEmails[sellerId]) {
+      sellerEmails[sellerId] = {
+        email: "",
+        name: "",
+        items: [],
+      };
+    }
+
+    const seller = await prisma.vendor.findUnique({
+      where: { externalId: sellerId },
+      include: {
+        user: true,
+      },
+    });
+
+    if (seller) {
+      sellerEmails[sellerId].email = seller.user.email;
+      sellerEmails[sellerId].name = seller.fullName;
+      sellerEmails[sellerId].items.push({
+        productName: orderItem.productName,
+        quantity: orderItem.quantity,
+      });
+    }
+  }
+
+  // Send emails to each seller with grouped order items
+  for (const sellerId in sellerEmails) {
+    const sellerEmailData = sellerEmails[sellerId];
+    const sellerNotificationEmail = new Email({
+      email: "makwananikhil36@gmail.com",
+      name: sellerEmailData.name,
+    });
+
+    await sellerNotificationEmail.send({
+      subject: "New Order Received",
+      html: `
+      Dear ${sellerEmailData.name}, you have received a new order (ID: ${
+        order.orderDisplayId
+      }). <br>
+      Order Details: <br>
+      ${sellerEmailData.items
+        .map(
+          (item: any) => `* ${item.productName} (Quantity: ${item.quantity})`
+        )
+        .join("<br>")}
+    `,
+    });
+  }
 
   // 4.Update the Inventory
   await prisma.$transaction(async (prismaInstance) => {
@@ -290,14 +357,18 @@ const emailCustomerAboutFailedPayment = (session: any) => {
 export const getOrdersBySellerId = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const sellerId = req?.auth?.userId;
-    // const sellerId = req.params;
     const rawStatus = req.query.status?.toString(); // Handle potential undefined status
     const statusArray: OrderItemStatus[] = [];
+    const search = req.query.search?.toString(); // Get search query parameter
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
+    const offset = (page - 1) * limit;
     if (rawStatus) {
       statusArray.push(
         ...rawStatus
           .split(",")
           .map((str) => str.trim() as OrderItemStatus)
+          .filter((item) => Object.values(OrderItemStatus).includes(item))
           .filter(Boolean)
       );
     }
@@ -318,9 +389,11 @@ export const getOrdersBySellerId = catchAsync(
           createdAt: "desc",
         },
       },
+      skip: offset,
+      take: limit,
     };
 
-    if (rawStatus) {
+    if (statusArray.length > 0) {
       query.where = {
         ...query.where,
         deliveryStatus: {
@@ -329,15 +402,48 @@ export const getOrdersBySellerId = catchAsync(
       };
     }
 
+    if (search) {
+      query.where = {
+        ...query.where,
+        OR: [
+          {
+            productName: {
+              contains: search,
+              mode: "insensitive", // Case-insensitive search
+            },
+          },
+          {
+            productDesc: {
+              contains: search,
+              mode: "insensitive", // Case-insensitive search
+            },
+          },
+          {
+            order: {
+              customerDetails: {
+                path: ["name"], // Assuming you have a 'name' field in customerDetails JSON
+                string_contains: search,
+              },
+            },
+          },
+        ],
+      };
+    }
+
     const [orderItems, count] = await prisma.$transaction([
       prisma.orderItem.findMany(query),
       prisma.orderItem.count({ where: query.where }),
     ]);
 
+    const totalPages = Math.ceil(count / limit);
+
     res.status(200).json({
       success: true,
       pagination: {
         total: count,
+        page: page,
+        limit: limit,
+        pageCount: totalPages,
       },
       data: orderItems,
     });

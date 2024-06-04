@@ -1,57 +1,36 @@
 import catchAsync from "@/utils/catchAsync";
 import { NextFunction, Request, Response } from "express";
 import prisma from "@/lib/prisma";
-import AppError from "@/utils/AppError";
-
-export const createCategory = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { name, description, categoryImg, categorySlug, parentId } =
-        req.body;
-
-      if (parentId) {
-        const parentCategory = await prisma.category.findUnique({
-          where: {
-            id: parentId,
-          },
-        });
-
-        if (!parentCategory) {
-          return next(new AppError(404, "Parent Category Not Found!"));
-        }
-      }
-
-      const newCategory = await prisma.category.create({
-        data: {
-          name,
-          description,
-          categoryImg,
-          categorySlug,
-          parentId,
-        },
-        include: {
-          children: true,
-        },
-      });
-
-      res.status(200).json(newCategory);
-    } catch (error) {
-      console.error("Error creating category:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  }
-);
+import { Prisma } from "@prisma/client";
 
 export const getAllCategories = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const categories = await prisma.category.findMany({
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
+    const offset = (page - 1) * limit;
+    const query: Prisma.CategoryFindManyArgs = {
       orderBy: {
         createdAt: "desc",
       },
-    });
+      skip: offset,
+      take: limit,
+    };
+
+    const [categories, count] = await prisma.$transaction([
+      prisma.category.findMany(query),
+      prisma.category.count(),
+    ]);
+
+    const totalPages = Math.ceil(count / limit);
     res.status(200).json({
       success: true,
-      categories: categories,
+      pagination: {
+        total: count,
+        page: page,
+        limit: limit,
+        pageCount: totalPages,
+      },
+      data: categories,
     });
   }
 );

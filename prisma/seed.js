@@ -110,51 +110,6 @@
 // Product Variations define the attributes or options that a product can have, providing flexibility in customization.
 // Product Combinations represent specific instances of a product based on selected variations, combining attributes into unique products with inventory and SKU.
 
-const data = {
-  productName: "T-Shirt",
-  productSlug: "t-shirt",
-  description: "A comfortable cotton t-shirt",
-  categories: ["Men's Clothing", "T-Shirts"],
-  subCategories: ["Casual", "Summer Wear"],
-  previewImage: "tshirt.jpg",
-  variations: [
-    {
-      variationName: "Color",
-      options: [
-        { optionName: "Red" },
-        { optionName: "Blue" },
-        { optionName: "Green" },
-      ],
-    },
-    {
-      variationName: "Size",
-      options: [
-        { optionName: "Small" },
-        { optionName: "Medium" },
-        { optionName: "Large" },
-      ],
-    },
-  ],
-  combinations: [
-    {
-      skuId: "TS001-RD-SM",
-      variationOptions: [
-        { variationName: "Color", optionName: "Red" },
-        { variationName: "Size", optionName: "Small" },
-      ],
-      availableStock: 100,
-    },
-    {
-      skuId: "TS001-BL-MD",
-      variationOptions: [
-        { variationName: "Color", optionName: "Blue" },
-        { variationName: "Size", optionName: "Medium" },
-      ],
-      availableStock: 50,
-    },
-  ],
-};
-
 // import { PrismaClient, Product, ProductVariation, ProductVariationOption, ProductCombination } from '@prisma/client';
 
 // const prisma = new PrismaClient();
@@ -256,102 +211,186 @@ const data = {
 // createProductWithCombinations(newProductData);
 
 import { PrismaClient } from "@prisma/client";
-import { connect } from "http2";
 
 const prisma = new PrismaClient();
 
 async function main() {
   // Seed data for Size model
-  await prisma.size.createMany({
-    data: [
-      { name: "Small" },
-      { name: "Medium" },
-      { name: "Large" },
-      { name: "28" },
-      { name: "32" },
-      { name: "30" },
-      // Add more sizes as needed
-    ],
-  });
-  // Seed data for Color model
-  await prisma.color.createMany({
-    data: [
-      { name: "Red" },
-      { name: "Blue" },
-      { name: "Green" },
-      { name: "Grey" },
-      // Add more colors as needed
-    ],
-  });
-  const parentCat = await prisma.category.create({
-    data: {
-      name: "Men",
-    },
-  });
-  const child = await prisma.category.create({
-    data: {
-      name: "Clothing",
-      parentId: parentCat.id,
-    },
-  });
-  const user1 = await prisma.user.create({
-    data: {
-      userId: "1", // Provide a UUID for userId
-      username: "john_doe",
-      email: "john@example.com",
-      profileImg: "https://example.com/profile.jpg",
-      phoneNumber: "+1234567890",
-    },
-  });
-  // Seed Customer data
-  const customer1 = await prisma.customer.create({
-    data: {
-      id: "1", // Provide a UUID for customer id
-      externalId: "customer1", // Example external ID
-      fullName: "John Doe",
-      address: {
-        create: [
-          {
-            city: "Ahmedabad",
-            country: "India",
-            line1: "123 Main Street",
-            postalCode: "380028",
-            state: "Gujarat",
-          },
-        ],
-      },
-      userId: user1.userId,
-    },
-  });
-  const user2 = await prisma.user.create({
-    data: {
-      userId: "2", // Provide a UUID for userId
-      username: "sam_gad",
-      email: "samyak@example.com",
-      profileImg: "https://example.com/profile.jpg",
-      phoneNumber: "5656565656",
-    },
-  });
-  // Seed Customer data
-  const customer2 = await prisma.customer.create({
-    data: {
-      id: "2", // Provide a UUID for customer id
-      externalId: "customer2", // Example external ID
-      fullName: "Samyak Gandhi",
-      address: {
-        create: [
-          {
-            city: "Ahmedabad",
-            country: "India",
-            line1: "123 Main Street",
-            postalCode: "380028",
-            state: "Gujarat",
-          },
-        ],
-      },
-      userId: user2.userId,
-    },
-  });
+  // await prisma.size.createMany({
+  //   data: [
+  //     { name: "Small" },
+  //     { name: "Medium" },
+  //     { name: "Large" },
+  //     { name: "28" },
+  //     { name: "32" },
+  //     { name: "30" },
+  //     // Add more sizes as needed
+  //   ],
+  // });
+  // // Seed data for Color model
+  // await prisma.color.createMany({
+  //   data: [
+  //     { name: "Red" },
+  //     { name: "Blue" },
+  //     { name: "Green" },
+  //     { name: "Grey" },
+  //     // Add more colors as needed
+  //   ],
+  // });
+  // const parentCat = await prisma.category.create({
+  //   data: {
+  //     name: "Men",
+  //   },
+  // });
+  // const child = await prisma.category.create({
+  //   data: {
+  //     name: "Clothing",
+  //     parentId: parentCat.id,
+  //   },
+  // });
+  // const user1 = await prisma.user.create({
+  //   data: {
+  //     userId: "1", // Provide a UUID for userId
+  //     username: "john_doe",
+  //     email: "john@example.com",
+  //     profileImg: "https://example.com/profile.jpg",
+  //     phoneNumber: "+1234567890",
+  //   },
+  // });
+  // // Seed Customer data
+  // const customer1 = await prisma.customer.create({
+  //   data: {
+  //     id: "1", // Provide a UUID for customer id
+  //     externalId: "customer1", // Example external ID
+  //     fullName: "John Doe",
+  //     address: {
+  //       create: [
+  //         {
+  //           city: "Ahmedabad",
+  //           country: "India",
+  //           line1: "123 Main Street",
+  //           postalCode: "380028",
+  //           state: "Gujarat",
+  //         },
+  //       ],
+  //     },
+  //     userId: user1.userId,
+  //   },
+  // });
+  // const user2 = await prisma.user.create({
+  //   data: {
+  //     userId: "2", // Provide a UUID for userId
+  //     username: "sam_gad",
+  //     email: "samyak@example.com",
+  //     profileImg: "https://example.com/profile.jpg",
+  //     phoneNumber: "5656565656",
+  //   },
+  // });
+  // // Seed Customer data
+  // const customer2 = await prisma.customer.create({
+  //   data: {
+  //     id: "2", // Provide a UUID for customer id
+  //     externalId: "customer2", // Example external ID
+  //     fullName: "Samyak Gandhi",
+  //     address: {
+  //       create: [
+  //         {
+  //           city: "Ahmedabad",
+  //           country: "India",
+  //           line1: "123 Main Street",
+  //           postalCode: "380028",
+  //           state: "Gujarat",
+  //         },
+  //       ],
+  //     },
+  //     userId: user2.userId,
+  //   },
+  // });
+  // const paymentsData = [
+  //   {
+  //     id: "payment1",
+  //     orderItemId: "e19d6b91-7d0b-44fe-8c50-860de8d1643b",
+  //     sellerId: "user_2gXIwTCV9588esOcIFYrjbtPPEk",
+  //     amount: 100.0,
+  //     date: new Date("2023-01-10T10:00:00Z"),
+  //     status: "paid",
+  //   },
+  //   {
+  //     id: "payment2",
+  //     orderItemId: "e19d6b91-7d0b-44fe-8c50-860de8d1643b",
+  //     sellerId: "user_2gXIwTCV9588esOcIFYrjbtPPEk",
+  //     amount: 150.0,
+  //     date: new Date("2023-02-15T10:00:00Z"),
+  //     status: "paid",
+  //   },
+  //   {
+  //     id: "payment3",
+  //     orderItemId: "e19d6b91-7d0b-44fe-8c50-860de8d1643b",
+  //     sellerId: "user_2gXw4jxxi9mpGsOCo7eYrHKYKLO",
+  //     amount: 200.0,
+  //     date: new Date("2024-03-20T10:00:00Z"),
+  //     status: "paid",
+  //   },
+  //   {
+  //     id: "payment4",
+  //     orderItemId: "e19d6b91-7d0b-44fe-8c50-860de8d1643b",
+  //     sellerId: "user_2gXw4jxxi9mpGsOCo7eYrHKYKLO",
+  //     amount: 250.0,
+  //     date: new Date("2024-04-25T10:00:00Z"),
+  //     status: "paid",
+  //   },
+  //   {
+  //     id: "payment5",
+  //     orderItemId: "e19d6b91-7d0b-44fe-8c50-860de8d1643b",
+  //     sellerId: "user_2gXIwTCV9588esOcIFYrjbtPPEk",
+  //     amount: 300.0,
+  //     date: new Date("2022-05-30T10:00:00Z"),
+  //     status: "paid",
+  //   },
+  //   {
+  //     id: "payment6",
+  //     orderItemId: "e19d6b91-7d0b-44fe-8c50-860de8d1643b",
+  //     sellerId: "user_2gXIwTCV9588esOcIFYrjbtPPEk",
+  //     amount: 400.0,
+  //     date: new Date("2021-06-10T10:00:00Z"),
+  //     status: "paid",
+  //   },
+  //   {
+  //     id: "payment7",
+  //     orderItemId: "e19d6b91-7d0b-44fe-8c50-860de8d1643b",
+  //     sellerId: "user_2gXIwTCV9588esOcIFYrjbtPPEk",
+  //     amount: 500.0,
+  //     date: new Date("2020-07-20T10:00:00Z"),
+  //     status: "paid",
+  //   },
+  //   {
+  //     id: "payment8",
+  //     orderItemId: "e19d6b91-7d0b-44fe-8c50-860de8d1643b",
+  //     sellerId: "user_2gYPtZB1SBnOsmcz2rlhnCiSj8k",
+  //     amount: 600.0,
+  //     date: new Date("2024-08-25T10:00:00Z"),
+  //     status: "paid",
+  //   },
+  //   {
+  //     id: "payment9",
+  //     orderItemId: "e19d6b91-7d0b-44fe-8c50-860de8d1643b",
+  //     sellerId: "user_2gXw4jxxi9mpGsOCo7eYrHKYKLO",
+  //     amount: 700.0,
+  //     date: new Date("2019-09-30T10:00:00Z"),
+  //     status: "paid",
+  //   },
+  //   {
+  //     id: "payment10",
+  //     orderItemId: "e19d6b91-7d0b-44fe-8c50-860de8d1643b",
+  //     sellerId: "user_2gXIwTCV9588esOcIFYrjbtPPEk",
+  //     amount: 800.0,
+  //     date: new Date("2018-10-10T10:00:00Z"),
+  //     status: "paid",
+  //   },
+  // ];
+  // for (const payment of paymentsData) {
+  //   await prisma.payments.create({ data: payment });
+  // }
 }
 
 main()

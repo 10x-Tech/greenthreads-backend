@@ -1,13 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "@/lib/prisma";
-import csvParser from "csv-parser";
-import fs from "fs";
 import AppError from "@/utils/AppError";
 import catchAsync from "@/utils/catchAsync";
 import { generateProductCode, generateSKU, generateSlug } from "@/utils/helper";
-import { randomUUID } from "crypto";
 import { v4 as uuidv4 } from "uuid";
-import { bufferToJSON } from "@/middleware";
+import { Prisma } from "@prisma/client";
 
 function generateSkuId(payload: any): string {
   const { size, color } = payload;
@@ -59,6 +56,18 @@ export const createProduct = catchAsync(
       subSubCategoryId?.name
     );
     const previewImage = productImages?.[0]?.url ?? "";
+    const brandInfo = await prisma.brand.findUnique({
+      where: {
+        sellerId: userId,
+      },
+    });
+
+    if (!brandInfo) {
+      return next(
+        new AppError(401, "Brand Not Found! Create One If not exist")
+      );
+    }
+
     const newProduct = await prisma.product.create({
       data: {
         sellerId: userId,
@@ -72,6 +81,7 @@ export const createProduct = catchAsync(
         categories: {
           connect: categoriesToConnect,
         },
+        brandId: brandInfo.id,
         ...parsedDimensions,
         deliveryRange,
         previewImage,
@@ -226,7 +236,13 @@ export const createOrUpdateSKU = catchAsync(
 export const getAllProducts = catchAsync(
   async (req: Request, res: Response) => {
     const userId = req?.auth?.userId;
-    const products = await prisma.product.findMany({
+    const search = req.query.search?.toString(); // Get search query parameter
+    const status = req.query.status?.toString(); // Get status query parameter
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
+    const offset = (page - 1) * limit;
+
+    const query: Prisma.ProductFindManyArgs = {
       where: {
         sellerId: userId,
         isDeleted: false,
@@ -238,10 +254,51 @@ export const getAllProducts = catchAsync(
       orderBy: {
         createdAt: "desc",
       },
-    });
+      skip: offset,
+      take: limit,
+    };
+
+    if (search) {
+      // Add search filter using OR operator for multiple fields
+      query.where = {
+        ...query.where,
+        OR: [
+          { productName: { contains: search, mode: "insensitive" } },
+          { description: { contains: search, mode: "insensitive" } },
+          { categories: { some: { name: { contains: search } } } },
+          { Brand: { name: { contains: search } } },
+        ],
+      };
+    }
+
+    // Apply the status filter if provided
+    if (status === "active") {
+      query.where = {
+        ...query.where,
+        isActive: true,
+      };
+    } else if (status === "inactive") {
+      query.where = {
+        ...query.where,
+        isActive: false,
+      };
+    }
+
+    const [products, count] = await prisma.$transaction([
+      prisma.product.findMany(query),
+      prisma.product.count({ where: query.where }),
+    ]);
+
+    const totalPages = Math.ceil(count / limit);
 
     res.status(200).json({
       success: true,
+      pagination: {
+        total: count,
+        page: page,
+        limit: limit,
+        pageCount: totalPages,
+      },
       data: products,
     });
   }

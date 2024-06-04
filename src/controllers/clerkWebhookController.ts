@@ -61,7 +61,6 @@ async function createVendor({
 
 // sync clerk user with database
 export const syncUser = async (req: Request, res: Response) => {
-  console.log("HELLo");
   // Check if the 'Signing Secret' from the Clerk Dashboard was correctly provided
   const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
   if (!WEBHOOK_SECRET) {
@@ -112,62 +111,108 @@ export const syncUser = async (req: Request, res: Response) => {
   const eventType = evt.type;
   console.log(evt?.data, "EVENT");
 
-  const { id, first_name, last_name, image_url, unsafe_metadata, username } =
-    evt.data;
-  const { phoneNumber } = unsafe_metadata;
+  const { id, first_name, last_name, unsafe_metadata, username } = evt.data;
+  const { phoneNumber, role } = unsafe_metadata;
   const fullName = ((first_name || "") + " " + (last_name || "")).trim();
 
   if (eventType === "user.created") {
     const email = evt.data.email_addresses?.[0]?.email_address;
-
-    createVendor({
-      username,
-      email,
-      fullName,
-      role: VendorRole.SELLER,
-      externalId: id,
-      phoneNumber,
-    });
-
-    // await clerkClient.users.updateUserMetadata(id, {
-    //   publicMetadata: {
-    //     profileId: profile.id,
-    //   },
-    // });
-  } else if (eventType === "user.updated") {
-    await prisma.vendor.update({
-      data: {
-        user: {
-          update: {
-            data: { ...(image_url && { avatarUrl: image_url as string }) },
-          },
-        },
-      },
-      where: {
-        externalId: id as string,
-      },
-    });
-  } else if (eventType === "user.deleted") {
-    const { deleted } = evt.data;
-
-    if (deleted) {
-      await prisma.vendor.update({
-        data: {
-          user: {
-            update: {
-              isActive: false,
-            },
-          },
-        },
-        where: {
-          externalId: id as string,
-        },
+    if (role === "SELLER" || role === "ADMIN") {
+      createVendor({
+        username,
+        email,
+        fullName,
+        role: role,
+        externalId: id,
+        phoneNumber,
+      });
+    } else if (role === "CUSTOMER") {
+      createCustomer({
+        username,
+        email,
+        fullName,
+        externalId: id,
+        phoneNumber,
       });
     }
-  } else if (eventType === "session.created") {
-    console.log(eventType, evt.data);
-  } else if (eventType === "session.ended" || eventType === "session.removed") {
-    console.log(eventType, evt.data);
+  } else if (eventType === "user.updated") {
+    const { id, first_name, last_name, image_url, unsafe_metadata, username } =
+      evt.data;
+    const { phoneNumber, role } = unsafe_metadata;
+    const fullName = ((first_name || "") + " " + (last_name || "")).trim();
+
+    const userData = {
+      username,
+      phoneNumber,
+      profileImg: image_url,
+    };
+
+    await prisma.$transaction(async (tx) => {
+      let user;
+
+      // Try to find the user in the vendor table first, then in the customer table
+      if (role === "SELLER" || role === "ADMIN") {
+        console.log("VENDOR");
+        user = await tx.vendor.findUnique({
+          where: { externalId: id },
+        });
+        if (user) {
+          // Update user data and vendor full name in one query
+          await tx.vendor.update({
+            where: { externalId: id },
+            data: {
+              fullName,
+              user: {
+                update: userData,
+              },
+            },
+          });
+        }
+      } else {
+        console.log("CUSTOMER");
+
+        user = await tx.customer.findUnique({
+          where: { externalId: id },
+        });
+        if (user) {
+          // Update user data and customer full name in one query
+          await tx.customer.update({
+            where: { externalId: id },
+            data: {
+              fullName,
+              user: {
+                update: userData,
+              },
+            },
+          });
+        }
+      }
+
+      return user;
+    });
+  } else if (eventType === "user.deleted") {
+    const { deleted, id } = evt.data;
+    let user;
+    await prisma.$transaction(async (tx) => {
+      user = await tx.vendor.findUnique({
+        where: { externalId: id },
+      });
+
+      if (!user) {
+        user = await tx.customer.findUnique({
+          where: { externalId: id },
+        });
+      }
+
+      if (deleted && user) {
+        await tx.user.update({
+          where: { userId: user.id },
+          data: { isActive: false },
+        });
+      }
+
+      return user;
+    });
   }
 
   return res.status(200).json({

@@ -8,6 +8,21 @@ datasource db {
   url      = env("LOCAL_DATABASE_URL")
 }
 
+model Payments {
+  id          String   @id @default(uuid())
+  orderItemId String
+  sellerId    String
+  amount      Float
+  date        DateTime @default(now())
+  status      String
+
+  // Define relations
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  seller    Vendor    @relation(fields: [sellerId], references: [externalId], onDelete: Cascade)
+
+  @@map("payments")
+}
+
 model OrderItem {
   id               String          @id @default(uuid())
   productId        String
@@ -27,6 +42,7 @@ model OrderItem {
   order            Order           @relation(fields: [orderId], references: [id])
   product          Product         @relation(fields: [productId], references: [id])
   seller           Vendor?         @relation(fields: [sellerId], references: [externalId])
+  payments         Payments[]
 }
 
 model Order {
@@ -87,7 +103,7 @@ model Product {
   productCode        String?           @unique
   brandId            String?
   OrderItem          OrderItem[]
-  Brand              Brand?            @relation(fields: [brandId], references: [id])
+  brand              Brand?            @relation(fields: [brandId], references: [id])
   seller             Vendor?           @relation(fields: [sellerId], references: [externalId])
   productImages      ProductImage[]
   productInventory   ProductInventory?
@@ -184,10 +200,16 @@ model Category {
 
 model Brand {
   id          String    @id @default(uuid())
-  name        String
+  name        String    @unique
   description String?
   media       String?
   products    Product[]
+  sellerId    String    @unique
+  seller      Vendor    @relation(fields: [sellerId], references: [externalId])
+
+  // Indexes
+  @@index(fields: [sellerId]) // Index for filtering by sellerId
+  @@index(fields: [name]) // Index for efficient name-based search and filtering
 }
 
 model User {
@@ -235,13 +257,15 @@ model Customer {
 model Vendor {
   fullName   String
   address    String?
-  role       VendorRole  @default(SELLER)
   userId     String      @unique
   externalId String      @unique
   id         String      @id @default(uuid())
   OrderItem  OrderItem[]
   products   Product[]
   user       User        @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  payments   Payments[]
+  Brand      Brand?
+  role       VendorRole  @default(SELLER)
 
   @@map("seller")
 }
@@ -306,3 +330,44 @@ enum VendorRole {
   ADMIN
   SELLER
 }
+
+// model Role {
+//   id          String           @id @default(uuid())
+//   name        String           @unique
+//   description String?
+//   permissions RolePermission[]
+//   vendorRole  VendorRole[]
+
+//   @@map("roles")
+// }
+
+// model Permission {
+//   id          String           @id @default(uuid())
+//   name        String           @unique
+//   description String?
+//   roles       RolePermission[]
+
+//   @@map("permissions")
+// }
+
+// model RolePermission {
+//   id           String     @id @default(uuid())
+//   roleId       String
+//   permissionId String
+//   role         Role       @relation(fields: [roleId], references: [id])
+//   permission   Permission @relation(fields: [permissionId], references: [id])
+
+//   @@unique([roleId, permissionId])
+//   @@map("role_permissions")
+// }
+
+// model VendorRole {
+//   id       String @id @default(uuid())
+//   vendorId String
+//   roleId   String
+//   Vendor   Vendor @relation(fields: [vendorId], references: [id])
+//   Role     Role   @relation(fields: [roleId], references: [id])
+
+//   @@unique([vendorId, roleId])
+//   @@map("vendor_roles")
+// }
