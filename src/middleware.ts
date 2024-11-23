@@ -94,7 +94,7 @@ export const authorizeRoles = (...allowedRoles: ("ADMIN" | "SELLER")[]) => {
     }
 
     const userRole = user.sessionClaims.metadata.role;
-
+    // console.log(userRole, "ROLE");
     if (!allowedRoles.includes(userRole)) {
       return next(new AppError(403, "Forbidden"));
     }

@@ -7,6 +7,7 @@ export const createBrand = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { name, description, brandImg, id } = req.body;
     const sellerId = req.auth.userId as string;
+    console.log(sellerId, "IDD");
 
     const brand = await prisma.brand.upsert({
       where: { id: id ?? "1" },

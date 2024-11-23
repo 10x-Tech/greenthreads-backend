@@ -4,7 +4,7 @@
   "type": "module",
   "main": "app.js",
   "scripts": {
-    "build": "rimraf dis && npx tsc",
+    "build": "echo 'Cleaning dist directory...' && rimraf dist && echo 'Compiling TypeScript...' && npx tsc && echo 'Build completed successfully!'",
     "prestart": "npm run build",
     "start": "node  dist/app.js",
     "preserve": "npm run build",
@@ -21,6 +21,7 @@
     "bun-types": "latest",
     "nodemon": "^3.1.0",
     "prisma": "^5.12.1",
+    "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
     "uuid": "^9.0.1"
@@ -36,7 +37,10 @@
     "@types/cors": "^2.8.17",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/stripe-v3": "^3.1.33",
+    "axios": "^1.7.2",
     "body-parser": "^1.20.2",
+    "bull": "^4.12.9",
+    "bullmq": "^5.7.15",
     "concurrently": "^8.2.2",
     "cookies": "^0.9.1",
     "cors": "^2.8.5",
@@ -46,13 +50,14 @@
     "express": "^4.18.3",
     "express-rate-limit": "^7.3.0",
     "helmet": "^7.1.0",
+    "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "node-schedule": "^2.1.1",
     "resend": "^3.2.0",
-    "rimraf": "^5.0.5",
     "stripe": "^15.6.0",
-    "svix": "^1.21.0"
+    "svix": "^1.21.0",
+    "xlsx": "^0.18.5"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.js"

@@ -16,54 +16,33 @@ export function generateSlug(name: string) {
   return slug;
 }
 
-async function deleteCategoryWithChildren(prisma: any, node: any) {
-  const children = await prisma.comment.findMany({
-    where: {
-      parent: {
-        id: node.id,
-      },
-    },
-  });
+export function generateSkuId({
+  brandName = "",
+  size,
+  color,
+}: {
+  brandName: string;
+  size: string;
+  color: string;
+}) {
+  // Ensure the brand name is at least 3 letters long by padding with underscores if necessary
+  const brandCode = brandName.padEnd(3, "_").slice(0, 3).toUpperCase();
 
-  for (const child of children) {
-    await deleteCategoryWithChildren(prisma, child);
-  }
+  // Generate a 4-digit number using a portion of a UUID
+  const uuid = uuidv4();
+  const numberCode = uuid.slice(0, 4).toUpperCase(); // Taking the first 4 characters of the UUID
 
-  await prisma.comment.delete({
-    where: {
-      id: node.id,
-    },
-  });
-}
+  // Create the skuId
+  const skuId = `${brandCode}_${size}_${color}_${numberCode}`;
 
-export function generateSKU(productCode: string, variations: any[]) {
-  // Initialize the SKU with the product code
-  let sku = productCode;
-
-  // Sort variations to ensure consistency in SKU generation
-  variations.sort((a, b) => a.variantName.localeCompare(b.variantName));
-
-  // Loop through each variation and concatenate its options to the SKU
-  variations.forEach((variation) => {
-    // Sort options to ensure consistency in SKU generation
-    variation.variationOptions.sort((a: any, b: any) =>
-      a.name.localeCompare(b.name)
-    );
-    // Extract the first character of each option name (or any other method)
-    const variationCode = variation.variationOptions
-      .map((option: any) => option.name[0].toUpperCase())
-      .join("");
-    sku += variationCode;
-  });
-
-  return sku;
+  return skuId;
 }
 
 export function generateProductCode(
   productName: string,
   category: string,
-  subCategory: string,
-  subSubCategory: string
+  subCategory?: string,
+  subSubCategory?: string
 ) {
   // Convert strings to uppercase and remove spaces
   const formattedName = productName.toUpperCase().replace(/\s/g, "");
@@ -100,7 +79,6 @@ export function generateOrderId() {
 
 // Example usage
 const orderId = generateOrderId();
-console.log(orderId);
 
 export const formatPeriodicRevenue = (
   orderItems: any[],

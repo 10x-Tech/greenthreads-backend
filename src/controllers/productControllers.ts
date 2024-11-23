@@ -2,17 +2,15 @@ import { Request, Response, NextFunction } from "express";
 import prisma from "@/lib/prisma";
 import AppError from "@/utils/AppError";
 import catchAsync from "@/utils/catchAsync";
-import { generateProductCode, generateSKU, generateSlug } from "@/utils/helper";
-import { v4 as uuidv4 } from "uuid";
+import {
+  generateProductCode,
+  generateSkuId,
+  generateSlug,
+} from "@/utils/helper";
 import { Prisma } from "@prisma/client";
-
-function generateSkuId(payload: any): string {
-  const { size, color } = payload;
-  const uuid = uuidv4(); // Assuming you have a function to generate UUIDs
-  const shortUuid = uuid.replace(/-/g, "").substring(0, 6);
-  const skuId = `${size.name}-${color.name}-${shortUuid}`;
-  return skuId.toUpperCase();
-}
+import xlsx from "xlsx";
+import bulkUploadQueue from "@/Queue/queue";
+import axios from "axios";
 
 //Create A Product
 export const createProduct = catchAsync(
@@ -127,11 +125,17 @@ export const createOrUpdateSKU = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { productId } = req.params;
     const { skus = [] } = req.body;
-    console.log(skus, "SKUS");
 
     const existingProduct = await prisma.product.findUnique({
       where: {
         id: productId,
+      },
+      include: {
+        brand: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
@@ -155,7 +159,11 @@ export const createOrUpdateSKU = catchAsync(
     // Update or create SKUs
     for (const sku of skus) {
       const { id, title, size, color, availableStock } = sku;
-      const skuID = generateSkuId({ size, color });
+      const skuID = generateSkuId({
+        brandName: existingProduct.brand?.name as string,
+        size,
+        color,
+      });
       //   let updatedOrNewSKU;
       //   if (id) {
       //     const existingSKU = await prisma.sKU.findUnique({
@@ -518,4 +526,42 @@ export const getAllVariations = catchAsync(
   }
 );
 
-///////// HELPER FUNCTIONS ????????
+export const bulkUpload = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  console.log("bulkUpload REACHED");
+  try {
+    const userId = req?.auth?.userId;
+    if (!userId) {
+      return next(new AppError(401, "Unauthenticated"));
+    }
+
+    const fileUrl = req.body.fileUrl;
+    if (!fileUrl) {
+      return next(new AppError(400, "No file URL provided"));
+    }
+
+    // Download the file from the provided URL
+    const response = await axios.get(fileUrl, { responseType: "arraybuffer" });
+    const buffer = Buffer.from(response.data);
+
+    const workbook = xlsx.read(buffer, { type: "buffer" });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = xlsx.utils.sheet_to_json(sheet);
+
+    // Add the rows and userId to the queue
+    const queue = bulkUploadQueue.getQueue();
+    if (!queue) {
+      return next(new AppError(500, "Queue not initialized"));
+    }
+
+    await queue.add("bulkUpload", { rows, userId });
+
+    res.status(202).json({ success: true, message: "File is being processed" });
+  } catch (error) {
+    next(error);
+  }
+};
